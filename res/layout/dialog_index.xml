@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layoutDirection="rtl"
+    app:cardBackgroundColor="#FDFBF7"
+    app:cardCornerRadius="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#EFE5D5"
+            android:gravity="center"
+            android:padding="16dp"
+            android:text="فهرس سور القرآن الكريم"
+            android:textColor="#4A2E1B"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <ListView
+            android:id="@+id/surahListView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="#DDCFB4"
+            android:dividerHeight="1dp"
+            android:paddingBottom="16dp"
+            android:clipToPadding="false" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
