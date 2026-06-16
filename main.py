@@ -23,9 +23,18 @@ class QuranApp:
         self.bookmarks = self._load_bookmarks()
         self.assets_path = Path("assets/quran_pages")
         
-        # Setup UI
+        # Initialize UI components as None
+        self.canvas = None
+        self.page_label = None
+        self.page_slider = None
+        self.status_label = None
+        self.photo_image = None
+        
+        # Setup UI FIRST
         self._setup_ui()
-        self._load_page(self.current_page)
+        
+        # THEN load page
+        self.root.after(100, lambda: self._load_page(self.current_page))
     
     def _setup_ui(self):
         """Setup the main application UI"""
@@ -144,75 +153,110 @@ class QuranApp:
     
     def _load_page(self, page_num):
         """Load and display a Quran page"""
-        if page_num < 1 or page_num > self.total_pages:
-            messagebox.showwarning("Invalid Page", f"Page must be between 1 and {self.total_pages}")
-            return
-        
-        self.current_page = page_num
-        
-        # Try multiple image formats
-        image_path = None
-        for ext in ['.png', '.jpg', '.gif']:
-            potential_path = self.assets_path / f"B_page_{page_num:03d}{ext}"
-            if potential_path.exists():
-                image_path = potential_path
-                break
-        
-        if image_path and image_path.exists():
-            try:
-                image = Image.open(image_path)
-                canvas_width = self.canvas.winfo_width()
-                canvas_height = self.canvas.winfo_height()
-                
-                if canvas_width > 1:
-                    image.thumbnail((canvas_width - 20, canvas_height - 20), Image.Resampling.LANCZOS)
-                
-                self.photo_image = ImageTk.PhotoImage(image)
-                self.canvas.delete("all")
-                self.canvas.create_image(0, 0, image=self.photo_image, anchor=tk.NW)
-                self.canvas.config(scrollregion=self.canvas.bbox("all"))
-                
-                self.page_slider.set(page_num)
-                self.page_label.config(text=f"Page: {page_num}/{self.total_pages}")
-                
-                bookmark_status = "🔖" if page_num in self.bookmarks else ""
-                self.status_label.config(text=f"Page {page_num} {bookmark_status}")
-                
-            except Exception as e:
-                self.status_label.config(text=f"Error loading image: {str(e)}")
-        else:
-            self.status_label.config(text=f"Image not found for page {page_num}")
+        try:
+            if page_num < 1 or page_num > self.total_pages:
+                self.status_label.config(text=f"Invalid page: {page_num}")
+                return
+            
+            self.current_page = page_num
+            
+            # Try multiple image formats
+            image_path = None
+            for ext in ['.png', '.jpg', '.jpeg', '.gif']:
+                potential_path = self.assets_path / f"B_page_{page_num:03d}{ext}"
+                if potential_path.exists():
+                    image_path = potential_path
+                    break
+            
+            if not image_path:
+                # Try alternative naming patterns
+                for naming_pattern in [f"A_intro_{page_num}.png", f"page_{page_num}.png", f"page_{page_num:03d}.png"]:
+                    potential_path = self.assets_path / naming_pattern
+                    if potential_path.exists():
+                        image_path = potential_path
+                        break
+            
+            if image_path and image_path.exists():
+                try:
+                    image = Image.open(image_path)
+                    
+                    # Get canvas dimensions
+                    self.canvas.update()
+                    canvas_width = self.canvas.winfo_width()
+                    canvas_height = self.canvas.winfo_height()
+                    
+                    if canvas_width > 1 and canvas_height > 1:
+                        image.thumbnail((canvas_width - 20, canvas_height - 20), Image.Resampling.LANCZOS)
+                    
+                    self.photo_image = ImageTk.PhotoImage(image)
+                    self.canvas.delete("all")
+                    self.canvas.create_image(0, 0, image=self.photo_image, anchor=tk.NW)
+                    self.canvas.config(scrollregion=self.canvas.bbox("all"))
+                    
+                    # Update UI
+                    if self.page_slider:
+                        self.page_slider.set(page_num)
+                    if self.page_label:
+                        self.page_label.config(text=f"Page: {page_num}/{self.total_pages}")
+                    
+                    # Update status
+                    bookmark_status = "🔖" if page_num in self.bookmarks else ""
+                    if self.status_label:
+                        self.status_label.config(text=f"Page {page_num} {bookmark_status}")
+                    
+                except Exception as e:
+                    if self.status_label:
+                        self.status_label.config(text=f"Error loading image: {str(e)}")
+            else:
+                if self.status_label:
+                    self.status_label.config(text=f"Image not found for page {page_num}. Check assets/quran_pages/")
+        except Exception as e:
+            print(f"Error in _load_page: {e}")
+            if self.status_label:
+                self.status_label.config(text=f"Error: {str(e)}")
     
     def next_page(self):
+        """Go to next page"""
         if self.current_page < self.total_pages:
             self._load_page(self.current_page + 1)
     
     def prev_page(self):
+        """Go to previous page"""
         if self.current_page > 1:
             self._load_page(self.current_page - 1)
     
     def on_slider_change(self, value):
-        page = int(float(value))
-        self._load_page(page)
+        """Handle slider change"""
+        try:
+            page = int(float(value))
+            self._load_page(page)
+        except:
+            pass
     
     def on_canvas_scroll(self, event):
-        if event.num == 5 or event.delta < 0:
-            self.next_page()
-        elif event.num == 4 or event.delta > 0:
-            self.prev_page()
+        """Handle mouse scroll on canvas"""
+        try:
+            if event.num == 5 or event.delta < 0:
+                self.next_page()
+            elif event.num == 4 or event.delta > 0:
+                self.prev_page()
+        except:
+            pass
     
     def toggle_bookmark(self):
+        """Add/remove current page from bookmarks"""
         if self.current_page in self.bookmarks:
             self.bookmarks.remove(self.current_page)
-            messagebox.showinfo("Bookmark Removed", f"Page {self.current_page} removed")
+            messagebox.showinfo("Bookmark Removed", f"Page {self.current_page} removed from bookmarks")
         else:
             self.bookmarks.append(self.current_page)
-            messagebox.showinfo("Bookmark Added", f"Page {self.current_page} added")
+            messagebox.showinfo("Bookmark Added", f"Page {self.current_page} bookmarked!")
         
         self._save_bookmarks()
         self._load_page(self.current_page)
     
     def show_bookmarks(self):
+        """Show all bookmarks"""
         if not self.bookmarks:
             messagebox.showinfo("Bookmarks", "No bookmarks yet")
             return
@@ -237,13 +281,30 @@ class QuranApp:
         ttk.Button(bookmarks_window, text="Go To", command=go_to_bookmark).pack(pady=5)
     
     def open_settings(self):
-        messagebox.showinfo("Settings", "Settings coming soon!")
+        """Open settings dialog"""
+        messagebox.showinfo("Settings", "Settings coming soon!\n\nFuture features:\n- Font size adjustment\n- Theme selection\n- Display options")
     
     def show_info(self):
-        info_text = "Quran Reader - Python Edition\n\nVersion 1.0\n\n© 2026"
-        messagebox.showinfo("About", info_text)
+        """Show application info"""
+        info_text = """Quran Reader - Python Edition
+
+Version 1.0
+Islamic learning application
+
+Features:
+• Page-based Quran navigation (604 pages)
+• Bookmark management
+• Mouse wheel navigation
+• Settings and customization
+
+© 2026 - All rights reserved
+Made with ❤️
+
+السلام عليكم ورحمة الله وبركاته"""
+        messagebox.showinfo("About Quran Reader", info_text)
     
     def _load_bookmarks(self):
+        """Load bookmarks from file"""
         bookmarks_file = Path("bookmarks.json")
         if bookmarks_file.exists():
             try:
@@ -254,8 +315,12 @@ class QuranApp:
         return []
     
     def _save_bookmarks(self):
-        with open("bookmarks.json", 'w') as f:
-            json.dump(self.bookmarks, f)
+        """Save bookmarks to file"""
+        try:
+            with open("bookmarks.json", 'w') as f:
+                json.dump(self.bookmarks, f)
+        except Exception as e:
+            print(f"Error saving bookmarks: {e}")
 
 
 def main():
